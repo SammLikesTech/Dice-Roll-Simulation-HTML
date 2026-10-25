@@ -1,0 +1,319 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Dice Roll Simulation</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=IBM+Plex+Sans:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column, code pair side by side when wide, live demo as a terminal strip at the end */
+:root {
+  --bg: #f2f5f8;
+  --surface: #ffffff;
+  --fg: #14202b;
+  --muted: #5a6b7a;
+  --line: #d5dde5;
+  --accent: #d7263d;
+  --accent-ink: #ffffff;
+  --code-bg: #101a24;
+  --code-fg: #dbe6f0;
+  --code-dim: #7d92a5;
+  --good: #1f8a5b;
+  --warn: #b7791f;
+  --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d151d;
+    --surface: #15202b;
+    --fg: #e6edf3;
+    --muted: #93a4b4;
+    --line: #26343f;
+    --accent: #ff5b6e;
+    --accent-ink: #1a0508;
+    --code-bg: #0a1118;
+    --code-fg: #dbe6f0;
+    --code-dim: #6f8496;
+    --good: #4cc38a;
+    --warn: #e0a84a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0d151d;
+  --surface: #15202b;
+  --fg: #e6edf3;
+  --muted: #93a4b4;
+  --line: #26343f;
+  --accent: #ff5b6e;
+  --accent-ink: #1a0508;
+  --code-bg: #0a1118;
+  --code-fg: #dbe6f0;
+  --code-dim: #6f8496;
+  --good: #4cc38a;
+  --warn: #e0a84a;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--body);
+  font-size: 16px;
+  line-height: 1.6;
+  padding-block: 40px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 1040px; margin: 0 auto; display: flex; flex-direction: column; gap: 48px; }
+h1, h2 { font-family: var(--display); text-wrap: balance; margin: 0; line-height: 1.12; letter-spacing: -0.01em; }
+h1 { font-size: clamp(2rem, 6vw, 3.4rem); }
+h2 { font-size: 1.5rem; }
+p { margin: 0; max-width: 65ch; }
+code.i { font-family: var(--mono); font-size: 0.9em; background: var(--surface); border: 1px solid var(--line); padding: 1px 6px; border-radius: 4px; }
+
+.hero { display: grid; grid-template-columns: 1fr auto; gap: 24px; align-items: center; }
+.hero > * { min-width: 0; }
+.eyebrow { font-family: var(--mono); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); margin-bottom: 12px; }
+.lede { color: var(--muted); font-size: 1.1rem; margin-top: 16px; }
+.die { width: 96px; height: 96px; background: var(--accent); border-radius: 22px; display: grid; grid-template: repeat(3, 1fr) / repeat(3, 1fr); padding: 14px; gap: 4px; }
+.die i { width: 100%; height: 100%; border-radius: 50%; background: transparent; place-self: center; max-width: 18px; max-height: 18px; }
+.die i.on { background: var(--accent-ink); }
+
+section { display: flex; flex-direction: column; gap: 16px; }
+.pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 820px) { .pair { grid-template-columns: minmax(0, 1fr); } .hero { grid-template-columns: 1fr; } }
+
+.codebox { background: var(--code-bg); border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; min-width: 0; }
+.codebar { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,0.08); font-family: var(--mono); font-size: 0.78rem; color: var(--code-dim); }
+.copy { font: inherit; color: var(--code-fg); background: transparent; border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; padding: 3px 10px; cursor: pointer; }
+.copy:hover { border-color: var(--accent); }
+.copy:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+pre { margin: 0; padding: 16px; overflow-x: auto; font-family: var(--mono); font-size: 0.84rem; line-height: 1.65; color: var(--code-fg); tab-size: 4; }
+.k { color: #ff8fa0; } .s { color: #8fd6a6; } .n { color: #f2c879; } .c { color: var(--code-dim); }
+
+.notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+.note { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.note h3 { font-family: var(--display); font-size: 1.05rem; margin: 0; }
+.note p { color: var(--muted); font-size: 0.95rem; }
+
+.tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 0.93rem; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+tr:last-child td { border-bottom: 0; }
+th { font-family: var(--mono); font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); font-weight: 500; }
+td code { font-family: var(--mono); font-size: 0.85em; }
+
+.demo { background: var(--code-bg); color: var(--code-fg); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+.demo-head { font-family: var(--mono); font-size: 0.78rem; color: var(--code-dim); }
+.prompt { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; font-family: var(--mono); font-size: 0.9rem; }
+.prompt label { color: var(--code-dim); }
+.prompt input { flex: 1 1 140px; min-width: 0; font: inherit; color: var(--code-fg); background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.18); border-radius: 6px; padding: 8px 10px; }
+.prompt button { font: inherit; font-weight: 500; background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 6px; padding: 8px 16px; cursor: pointer; }
+.out { font-family: var(--mono); font-size: 0.9rem; min-height: 6.5em; display: flex; flex-direction: column; gap: 4px; }
+.out .line { color: var(--code-fg); }
+.out .hi { color: #7fe0ab; } .out .lo { color: #f2c879; } .out .bad { color: #ff8fa0; }
+.tally { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
+.tally div { background: rgba(255,255,255,0.06); border-radius: 8px; padding: 8px 4px; text-align: center; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.tally b { display: block; font-size: 1.2rem; font-weight: 500; }
+.tally span { font-size: 0.72rem; color: var(--code-dim); }
+.small { font-size: 0.85rem; color: var(--muted); }
+@media (prefers-reduced-motion: no-preference) { .die { transition: transform .25s; } .die.spin { transform: rotate(180deg); } }
+</style>
+
+<div class="wrap">
+  <header class="hero">
+    <div>
+      <div class="eyebrow">Python and C++ &middot; console program</div>
+      <h1>Dice Roll Simulation</h1>
+      <p class="lede">A short program that waits for you to type ROLL, picks a number from 1 to 6, and tells you whether it was a high or low roll. Below is the original Python code, a C++ version that behaves the same way, and a demo you can try.</p>
+    </div>
+    <div class="die" id="heroDie" aria-hidden="true"></div>
+  </header>
+
+  <section>
+    <h2>The two versions</h2>
+    <div class="pair">
+      <div class="codebox">
+        <div class="codebar"><span>dice.py</span><button class="copy" data-target="py">Copy</button></div>
+        <pre id="py"><span class="k">import</span> random
+
+Dice = <span class="n">1</span>,<span class="n">2</span>,<span class="n">3</span>,<span class="n">4</span>,<span class="n">5</span>,<span class="n">6</span>,
+Roll_dice = <span class="k">input</span>(<span class="s">"Enter ROLL to roll dice: "</span>)
+
+<span class="k">if</span> Roll_dice.upper() == <span class="s">"ROLL"</span>:
+    Dice = random.randint(<span class="n">1</span>,<span class="n">6</span>)
+    <span class="k">print</span>(Dice)
+    <span class="k">if</span> Dice &gt;= <span class="n">4</span>:
+        <span class="k">print</span>(<span class="s">"Wow a high roll :D"</span>)
+
+    <span class="k">if</span> Dice &lt;= <span class="n">3</span>:
+        <span class="k">print</span>(<span class="s">"Welp a low roll :/"</span>)
+
+<span class="k">if</span> Roll_dice.upper() != <span class="s">"ROLL"</span>:
+    <span class="k">print</span>(<span class="s">"You spelt roll wrong &gt;:C"</span>)</pre>
+      </div>
+      <div class="codebox">
+        <div class="codebar"><span>dice.cpp</span><button class="copy" data-target="cpp">Copy</button></div>
+        <pre id="cpp"><span class="k">#include</span> <span class="s">&lt;algorithm&gt;</span>
+<span class="k">#include</span> <span class="s">&lt;cctype&gt;</span>
+<span class="k">#include</span> <span class="s">&lt;iostream&gt;</span>
+<span class="k">#include</span> <span class="s">&lt;random&gt;</span>
+<span class="k">#include</span> <span class="s">&lt;string&gt;</span>
+
+<span class="k">int</span> main() {
+    std::string rollInput;
+    std::cout &lt;&lt; <span class="s">"Enter ROLL to roll dice: "</span>;
+    std::getline(std::cin, rollInput);
+
+    <span class="c">// Same job as Python's .upper()</span>
+    std::transform(rollInput.begin(), rollInput.end(),
+                   rollInput.begin(), ::toupper);
+
+    <span class="k">if</span> (rollInput == <span class="s">"ROLL"</span>) {
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_int_distribution&lt;<span class="k">int</span>&gt; dist(<span class="n">1</span>, <span class="n">6</span>);
+
+        <span class="k">int</span> dice = dist(gen);
+        std::cout &lt;&lt; dice &lt;&lt; <span class="s">"\n"</span>;
+
+        <span class="k">if</span> (dice &gt;= <span class="n">4</span>) {
+            std::cout &lt;&lt; <span class="s">"Wow a high roll :D\n"</span>;
+        } <span class="k">else</span> {
+            std::cout &lt;&lt; <span class="s">"Welp a low roll :/\n"</span>;
+        }
+    } <span class="k">else</span> {
+        std::cout &lt;&lt; <span class="s">"You spelt roll wrong &gt;:C\n"</span>;
+    }
+    <span class="k">return</span> <span class="n">0</span>;
+}</pre>
+      </div>
+    </div>
+    <p class="small">Build and run the C++ file with <code class="i">g++ -std=c++17 dice.cpp -o dice &amp;&amp; ./dice</code></p>
+  </section>
+
+  <section>
+    <h2>What the program does</h2>
+    <div class="notes">
+      <div class="note"><h3>1. Read the input</h3><p>It asks for text and converts it to upper case, so roll, Roll and ROLL all count.</p></div>
+      <div class="note"><h3>2. Pick a number</h3><p>If the text is ROLL, it picks a whole number from 1 to 6, each equally likely, and prints it.</p></div>
+      <div class="note"><h3>3. Judge the roll</h3><p>A 4, 5 or 6 prints the high roll message. A 1, 2 or 3 prints the low roll message.</p></div>
+      <div class="note"><h3>4. Catch typos</h3><p>Anything other than ROLL prints the spelling message and no dice is rolled.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Python and C++ side by side</h2>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Task</th><th>Python</th><th>C++</th></tr></thead>
+        <tbody>
+          <tr><td>Random 1 to 6</td><td><code>random.randint(1,6)</code></td><td><code>std::uniform_int_distribution&lt;int&gt;(1,6)</code> with a <code>std::mt19937</code> generator</td></tr>
+          <tr><td>Read a line</td><td><code>input("...")</code></td><td><code>std::getline(std::cin, s)</code></td></tr>
+          <tr><td>Upper case</td><td><code>s.upper()</code></td><td><code>std::transform(..., ::toupper)</code></td></tr>
+          <tr><td>Print</td><td><code>print(x)</code></td><td><code>std::cout &lt;&lt; x &lt;&lt; "\n"</code></td></tr>
+          <tr><td>Variable types</td><td>Figured out at run time</td><td>Declared up front, such as <code>int dice</code></td></tr>
+          <tr><td>Running it</td><td><code>python dice.py</code></td><td>Compile first, then run the program</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Two small changes in the C++ version</h2>
+    <p>The Python line <code class="i">Dice = 1,2,3,4,5,6,</code> makes a tuple that is thrown away as soon as <code class="i">Dice</code> is set to the random roll, so the C++ version leaves it out.</p>
+    <p>The three separate <code class="i">if</code> checks in Python become one <code class="i">if / else</code> in C++. The behavior is the same, and the program only tests the input once.</p>
+  </section>
+
+  <section>
+    <h2>Try it</h2>
+    <div class="demo">
+      <div class="demo-head">$ ./dice &nbsp;(this demo follows the same rules in JavaScript)</div>
+      <form class="prompt" id="form">
+        <label for="inp">Enter ROLL to roll dice:</label>
+        <input id="inp" type="text" value="roll" autocomplete="off" spellcheck="false">
+        <button type="submit">Run</button>
+      </form>
+      <div class="out" id="out" aria-live="polite"><div class="line">Press Run to see the output.</div></div>
+      <div>
+        <div class="demo-head" style="margin-bottom:8px">Results this visit</div>
+        <div class="tally" id="tally"></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+(function () {
+  var pips = { 1:[4], 2:[0,8], 3:[0,4,8], 4:[0,2,6,8], 5:[0,2,4,6,8], 6:[0,2,3,5,6,8] };
+  var die = document.getElementById('heroDie');
+  var counts = [0,0,0,0,0,0];
+
+  function drawDie(n) {
+    die.innerHTML = '';
+    for (var i = 0; i < 9; i++) {
+      var d = document.createElement('i');
+      if (pips[n].indexOf(i) !== -1) d.className = 'on';
+      die.appendChild(d);
+    }
+  }
+  function drawTally() {
+    var t = document.getElementById('tally');
+    t.innerHTML = '';
+    for (var i = 0; i < 6; i++) {
+      var d = document.createElement('div');
+      d.innerHTML = '<b>' + counts[i] + '</b><span>rolled ' + (i + 1) + '</span>';
+      t.appendChild(d);
+    }
+  }
+  function line(text, cls) {
+    var d = document.createElement('div');
+    d.className = 'line ' + (cls || '');
+    d.textContent = text;
+    return d;
+  }
+
+  document.getElementById('form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var out = document.getElementById('out');
+    out.innerHTML = '';
+    var text = document.getElementById('inp').value.toUpperCase();
+    if (text === 'ROLL') {
+      var dice = Math.floor(Math.random() * 6) + 1;
+      counts[dice - 1]++;
+      out.appendChild(line(String(dice)));
+      if (dice >= 4) out.appendChild(line('Wow a high roll :D', 'hi'));
+      else out.appendChild(line('Welp a low roll :/', 'lo'));
+      drawDie(dice);
+      die.classList.toggle('spin');
+      drawTally();
+    } else {
+      out.appendChild(line('You spelt roll wrong >:C', 'bad'));
+    }
+  });
+
+  var buttons = document.querySelectorAll('.copy');
+  for (var b = 0; b < buttons.length; b++) {
+    buttons[b].addEventListener('click', function () {
+      var btn = this;
+      var pre = document.getElementById(btn.getAttribute('data-target'));
+      var done = function () { btn.textContent = 'Copied'; setTimeout(function () { btn.textContent = 'Copy'; }, 1500); };
+      var fallback = function () {
+        var r = document.createRange(); r.selectNodeContents(pre);
+        var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+        btn.textContent = 'Selected';
+        setTimeout(function () { btn.textContent = 'Copy'; }, 1500);
+      };
+      try {
+        navigator.clipboard.writeText(pre.textContent).then(done, fallback);
+      } catch (err) { fallback(); }
+    });
+  }
+
+  drawDie(6);
+  drawTally();
+})();
+</script>
+
+</body></html>
